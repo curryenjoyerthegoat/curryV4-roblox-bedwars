@@ -8,38 +8,39 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local camera = workspace.CurrentCamera
 
--- 1. CurryV4 Theme Config
+-- 1. Theme
 local theme = {
     Main = Color3.fromRGB(20, 20, 25),
     Accent = Color3.fromRGB(138, 43, 226),
-    AccentHover = Color3.fromRGB(153, 51, 255),
     Text = Color3.fromRGB(255, 255, 255),
     TextDim = Color3.fromRGB(160, 160, 170),
     Background = Color3.fromRGB(15, 15, 20),
     Border = Color3.fromRGB(40, 40, 50)
 }
 
--- 2. State Management
+-- 2. State
 local state = {
-    masterEnabled = true,
-    combat = {
-        auraEnabled = true,
-        auraRange = 50,
-        aimbotEnabled = true,
-        aimStrength = 50,
-        silentAim = false
-    },
-    movement = {
-        flyEnabled = false,
-        flySpeed = 20,
-        noClip = false,
-        speedEnabled = false
-    },
-    config = {
-        espPlayers = true,
-        espItems = true,
-        tracers = false
-    }
+    master = true,
+    -- Combat
+    aura = true,
+    auraRange = 50,
+    aimbot = true,
+    aimStrength = 50,
+    silentAim = false,
+    -- Movement
+    fly = false,
+    flySpeed = 20,
+    noClip = false,
+    speed = false,
+    -- Config/Visuals
+    espPlayers = true,
+    espItems = true,
+    tracers = false,
+    -- Bedwars Specific
+    beeCollect = true,
+    autoFarm = false,
+    blockAura = false,
+    blockRange = 32
 }
 
 -- 3. UI Construction
@@ -50,13 +51,11 @@ local function createUI()
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.Parent = playerGui
 
-    -- Main Window
     local main = Instance.new("Frame")
     main.Name = "Main"
     main.Size = UDim2.new(0, 320, 0, 450)
     main.Position = UDim2.new(0.5, -160, 0.5, -225)
     main.BackgroundColor3 = theme.Main
-    main.BackgroundTransparency = 0.1
     main.BorderSizePixel = 0
     main.Parent = screenGui
     
@@ -69,7 +68,6 @@ local function createUI()
     mainStroke.Thickness = 1
     mainStroke.Parent = main
 
-    -- Title (Rainbow)
     local title = Instance.new("TextLabel")
     title.Name = "Title"
     title.Size = UDim2.new(1, 0, 0, 40)
@@ -80,18 +78,16 @@ local function createUI()
     title.Font = Enum.Font.GothamBold
     title.Parent = main
 
-    -- Rainbow Effect for Title
     local hue = 0
     RunService.Heartbeat:Connect(function(dt)
         hue = (hue + dt * 0.1) % 1
         title.TextColor3 = Color3.fromHSV(hue, 0.8, 1)
     end)
 
-    -- Master Toggle
     local masterToggle = Instance.new("TextButton")
     masterToggle.Name = "MasterToggle"
-    masterToggle.Size = UDim2.new(0, 60, 0, 25)
-    masterToggle.Position = UDim2.new(1, -70, 0, 8)
+    masterToggle.Size = UDim2.new(0, 80, 0, 25)
+    masterToggle.Position = UDim2.new(1, -90, 0, 8)
     masterToggle.BackgroundColor3 = theme.Accent
     masterToggle.Text = "MASTER: ON"
     masterToggle.TextColor3 = theme.Text
@@ -103,7 +99,6 @@ local function createUI()
     masterCorner.CornerRadius = UDim.new(0, 6)
     masterCorner.Parent = masterToggle
 
-    -- Tab Bar
     local tabBar = Instance.new("Frame")
     tabBar.Name = "TabBar"
     tabBar.Size = UDim2.new(1, -10, 0, 35)
@@ -118,7 +113,6 @@ local function createUI()
     tabLayout.Padding = UDim.new(0, 5)
     tabLayout.Parent = tabBar
 
-    -- Tabs
     local tabs = {}
     local tabNames = {"Combat", "Crash", "Movement", "Config"}
     for _, name in ipairs(tabNames) do
@@ -139,7 +133,6 @@ local function createUI()
         tabs[name] = btn
     end
 
-    -- Content Frame
     local content = Instance.new("ScrollingFrame")
     content.Name = "Content"
     content.Size = UDim2.new(1, -10, 1, -90)
@@ -158,8 +151,7 @@ local function createUI()
     contentLayout.Parent = content
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-    -- Helper: Create Toggle
-    local function createToggle(parent, order, label, default, callback, key)
+    local function createToggle(parent, order, label, default, key)
         local container = Instance.new("Frame")
         container.LayoutOrder = order
         container.Size = UDim2.new(1, 0, 0, 35)
@@ -195,21 +187,23 @@ local function createUI()
         toggleCorner.CornerRadius = UDim.new(0, 6)
         toggleCorner.Parent = toggle
 
-        local state = default
+        local function setState(newState)
+            state[key] = newState
+            toggle.Text = newState and "ON" or "OFF"
+            toggle.BackgroundColor3 = newState and theme.Accent or theme.Background
+            toggle.TextColor3 = newState and theme.Text or theme.TextDim
+        end
+
+        setState(default)
         toggle.MouseButton1Click:Connect(function()
-            state = not state
-            toggle.Text = state and "ON" or "OFF"
-            toggle.BackgroundColor3 = state and theme.Accent or theme.Background
-            toggle.TextColor3 = state and theme.Text or theme.TextDim
-            if key then state[key] = state end
-            if callback then callback(state) end
+            if state.master then
+                setState(not state[key])
+            end
         end)
-        
         return toggle
     end
 
-    -- Helper: Create Slider
-    local function createSlider(parent, order, label, min, max, default, callback, key)
+    local function createSlider(parent, order, label, min, max, default, key)
         local container = Instance.new("Frame")
         container.LayoutOrder = order
         container.Size = UDim2.new(1, 0, 0, 55)
@@ -269,8 +263,7 @@ local function createUI()
             val = math.floor(val)
             sliderFill.Size = UDim2.new(relX, 0, 1, 0)
             valueLabel.Text = tostring(val)
-            if key then state[key] = val end
-            if callback then callback(val) end
+            state[key] = val
         end
 
         sliderBg.InputBegan:Connect(function(input)
@@ -280,62 +273,4 @@ local function createUI()
             end
         end)
         sliderBg.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = false
-            end
-        end)
-        UserInputService.InputChanged:Connect(function(input)
-            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                updateSlider(input.Position.X)
-            end
-        end)
-    end
-
-    -- Helper: Create Button
-    local function createButton(parent, order, label, callback)
-        local btn = Instance.new("TextButton")
-        btn.LayoutOrder = order
-        btn.Size = UDim2.new(1, 0, 0, 35)
-        btn.BackgroundColor3 = theme.Accent
-        btn.Text = label
-        btn.TextColor3 = theme.Text
-        btn.TextSize = 14
-        btn.Font = Enum.Font.GothamBold
-        btn.BorderSizePixel = 0
-        btn.Parent = parent
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 8)
-        corner.Parent = btn
-        btn.MouseButton1Click:Connect(function()
-            if callback then callback() end
-        end)
-    end
-
-    -- Populate Tabs
-    -- COMBAT
-    createToggle(content, 1, "Kill Aura", state.combat.auraEnabled, function(s) state.combat.auraEnabled = s end, "auraEnabled")
-    createSlider(content, 2, "Aura Range", 10, 100, state.combat.auraRange, function(v) state.combat.auraRange = v end, "auraRange")
-    createToggle(content, 3, "Projectile Aimbot", state.combat.aimbotEnabled, function(s) state.combat.aimbotEnabled = s end, "aimbotEnabled")
-    createSlider(content, 4, "Aim Strength", 1, 100, state.combat.aimStrength, function(v) state.combat.aimStrength = v end, "aimStrength")
-    createToggle(content, 5, "Silent Aim", state.combat.silentAim, function(s) state.combat.silentAim = s end, "silentAim")
-
-    -- CRASH
-    createButton(content, 1, "💥 Client Crash (Others)", function()
-        print("[CurryV4] Client Crash Initiated")
-        local remote = ReplicatedStorage:FindFirstChild("ServerCommand")
-        if remote then remote:FireServer("CRASH") end
-    end)
-    createButton(content, 2, "🌫️ Lag Spike (Network)", function()
-        print("[CurryV4] Lag Spike Initiated")
-        local remote = ReplicatedStorage:FindFirstChild("ServerCommand")
-        if remote then remote:FireServer("LAG") end
-    end)
-
-    -- MOVEMENT
-    createToggle(content, 1, "Fly", state.movement.flyEnabled, function(s)
-        state.movement.flyEnabled = s
-        local char = player.Character
-        if char then
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            local hum = char:FindFirstChild("Humanoid")
-            if hrp and hum
+            if input.UserInputType ==
