@@ -150,6 +150,7 @@ local function createUI()
         local container = Instance.new("Frame")
         container.LayoutOrder = order
         container.Size = UDim2.new(1, 0, 0, 35)
+        container
         container.BackgroundColor3 = theme.Background
         container.BorderSizePixel = 0
         container.Parent = parent
@@ -169,4 +170,279 @@ local function createUI()
         labelTxt.Parent = container
 
         local toggle = Instance.new("TextButton")
-       
+        toggle.Size = UDim2.new(0, 50, 0, 25)
+        toggle.Position = UDim2.new(1, -60, 0, 5)
+        toggle.BackgroundColor3 = theme.Accent
+        toggle.Text = "ON"
+        toggle.TextColor3 = theme.Text
+        toggle.TextSize = 12
+        toggle.Font = Enum.Font.GothamBold
+        toggle.BorderSizePixel = 0
+        toggle.Parent = container
+        local toggleCorner = Instance.new("UICorner")
+        toggleCorner.CornerRadius = UDim.new(0, 6)
+        toggleCorner.Parent = toggle
+
+        local function setState(newState)
+            state[key] = newState
+            toggle.Text = newState and "ON" or "OFF"
+            toggle.BackgroundColor3 = newState and theme.Accent or theme.Background
+            toggle.TextColor3 = newState and theme.Text or theme.TextDim
+        end
+
+        setState(default)
+        toggle.MouseButton1Click:Connect(function()
+            if state.master then
+                setState(not state[key])
+            end
+        end)
+        return toggle
+    end
+
+    local function createSlider(parent, order, label, min, max, default, key)
+        local container = Instance.new("Frame")
+        container.LayoutOrder = order
+        container.Size = UDim2.new(1, 0, 0, 55)
+        container.BackgroundColor3 = theme.Background
+        container.BorderSizePixel = 0
+        container.Parent = parent
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = container
+
+        local labelTxt = Instance.new("TextLabel")
+        labelTxt.Size = UDim2.new(1, -20, 0, 20)
+        labelTxt.Position = UDim2.new(0, 10, 0, 5)
+        labelTxt.BackgroundTransparency = 1
+        labelTxt.Text = label
+        labelTxt.TextColor3 = theme.Text
+        labelTxt.TextSize = 14
+        labelTxt.Font = Enum.Font.GothamMedium
+        labelTxt.TextXAlignment = Enum.TextXAlignment.Left
+        labelTxt.Parent = container
+
+        local sliderBg = Instance.new("Frame")
+        sliderBg.Size = UDim2.new(1, -20, 0, 6)
+        sliderBg.Position = UDim2.new(0, 10, 0, 30)
+        sliderBg.BackgroundColor3 = theme.Border
+        sliderBg.BorderSizePixel = 0
+        sliderBg.Parent = container
+        local sliderCorner = Instance.new("UICorner")
+        sliderCorner.CornerRadius = UDim.new(0, 3)
+        sliderCorner.Parent = sliderBg
+
+        local sliderFill = Instance.new("Frame")
+        sliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+        sliderFill.BackgroundColor3 = theme.Accent
+        sliderFill.BorderSizePixel = 0
+        sliderFill.Parent = sliderBg
+        local sliderFillCorner = Instance.new("UICorner")
+        sliderFillCorner.CornerRadius = UDim.new(0, 3)
+        sliderFillCorner.Parent = sliderFill
+
+        local valueLabel = Instance.new("TextLabel")
+        valueLabel.Size = UDim2.new(1, -20, 0, 15)
+        valueLabel.Position = UDim2.new(0, 10, 0, 40)
+        valueLabel.BackgroundTransparency = 1
+        valueLabel.Text = tostring(default)
+        valueLabel.TextColor3 = theme.TextDim
+        valueLabel.TextSize = 12
+        valueLabel.Font = Enum.Font.Gotham
+        valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+        valueLabel.Parent = container
+
+        local dragging = false
+        local function updateSlider(x)
+            local relX = (x - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
+            relX = math.clamp(relX, 0, 1)
+            local val = min + relX * (max - min)
+            val = math.floor(val)
+            sliderFill.Size = UDim2.new(relX, 0, 1, 0)
+            valueLabel.Text = tostring(val)
+            state[key] = val
+        end
+
+        sliderBg.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                updateSlider(input.Position.X)
+            end
+        end)
+        sliderBg.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                updateSlider(input.Position.X)
+            end
+        end)
+    end
+
+    local function createButton(parent, order, label, callback)
+        local btn = Instance.new("TextButton")
+        btn.LayoutOrder = order
+        btn.Size = UDim2.new(1, 0, 0, 35)
+        btn.BackgroundColor3 = theme.Accent
+        btn.Text = label
+        btn.TextColor3 = theme.Text
+        btn.TextSize = 14
+        btn.Font = Enum.Font.GothamBold
+        btn.BorderSizePixel = 0
+        btn.Parent = parent
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = btn
+        btn.MouseButton1Click:Connect(function()
+            if callback then callback() end
+        end)
+    end
+
+    -- Populate Combat Tab
+    createToggle(content, 1, "Kill Aura", state.aura, "aura")
+    createSlider(content, 2, "Aura Range", 10, 100, state.auraRange, "auraRange")
+    createToggle(content, 3, "Projectile Aimbot", state.aimbot, "aimbot")
+    createSlider(content, 4, "Aim Strength", 1, 100, state.aimStrength, "aimStrength")
+    createToggle(content, 5, "Silent Aim", state.silentAim, "silentAim")
+    createToggle(content, 6, "Block Aura", state.blockAura, "blockAura")
+    createSlider(content, 7, "Block Range", 16, 64, state.blockRange, "blockRange")
+
+    -- Populate Crash Tab
+    createButton(content, 1, "💥 Client Crash (Others)", function()
+        print("[CurryV4] Client Crash Initiated")
+        local remote = ReplicatedStorage:FindFirstChild("ServerCommand")
+        if not remote then
+            remote = Instance.new("RemoteEvent")
+            remote.Name = "ServerCommand"
+            remote.Parent = ReplicatedStorage
+        end
+        remote:FireServer("CRASH")
+    end)
+    createButton(content, 2, "🌫️ Lag Spike (Network)", function()
+        print("[CurryV4] Lag Spike Initiated")
+        local remote = ReplicatedStorage:FindFirstChild("ServerCommand")
+        if not remote then
+            remote = Instance.new("RemoteEvent")
+            remote.Name = "ServerCommand"
+            remote.Parent = ReplicatedStorage
+        end
+        remote:FireServer("LAG")
+    end)
+
+    -- Populate Movement Tab
+    createToggle(content, 1, "Fly", state.fly, "fly")
+    createSlider(content, 2, "Fly Speed", 1, 100, state.flySpeed, "flySpeed")
+    createToggle(content, 3, "No Clip", state.noClip, "noClip")
+    createToggle(content, 4, "Speed", state.speed, "speed")
+
+    -- Populate Config Tab
+    createToggle(content, 1, "ESP Players", state.espPlayers, "espPlayers")
+    createToggle(content, 2, "ESP Items", state.espItems, "espItems")
+    createToggle(content, 3, "Tracers", state.tracers, "tracers")
+    createToggle(content, 4, "Bee Keeper Auto-Collect", state.beeCollect, "beeCollect")
+    createToggle(content, 5, "Auto Farm (Bee/Resource)", state.autoFarm, "autoFarm")
+
+    -- Tab Switching Logic
+    local currentTab = "Combat"
+    for name, btn in pairs(tabs) do
+        btn.MouseButton1Click:Connect(function()
+            for n, b in pairs(tabs) do
+                b.BackgroundColor3 = theme.Background
+                b.TextColor3 = theme.TextDim
+            end
+            btn.BackgroundColor3 = theme.Accent
+            btn.TextColor3 = theme.Text
+            currentTab = name
+        end)
+    end
+    tabs["Combat"].BackgroundColor3 = theme.Accent
+    tabs["Combat"].TextColor3 = theme.Text
+
+    -- Master Toggle Logic
+    masterToggle.MouseButton1Click:Connect(function()
+        state.master = not state.master
+        masterToggle.Text = state.master and "MASTER: ON" or "MASTER: OFF"
+        masterToggle.BackgroundColor3 = state.master and theme.Accent or theme.Background
+    end)
+
+    return screenGui
+end
+
+-- 4. Core Logic Functions
+local function getClosestEnemy(range)
+    local char = player.Character
+    if not char then return nil end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+    
+    local closest, closestDist
+    for _, other in pairs(Players:GetPlayers()) do
+        if other ~= player and other.Character then
+            local otherHrp = other.Character:FindFirstChild("HumanoidRootPart")
+            if otherHrp then
+                local dist = (hrp.Position - otherHrp.Position).Magnitude
+                if dist < range and (not closest or dist < closestDist) then
+                    closest = other
+                    closestDist = dist
+                end
+            end
+        end
+    end
+    return closest, closestDist
+end
+
+local function findBeeTarget()
+    if not state.beeCollect then return nil end
+    local char = player.Character
+    if not char then return nil end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+    
+    -- Look for Bee Keeper Kit in tool
+    local hasKit = false
+    for _, tool in pairs(char:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:find("Bee") then
+            hasKit = true
+            break
+        end
+    end
+    if not hasKit then return nil end
+
+    -- Find closest bee
+    local closestBee, closestDist
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Name:find("Bee") then
+            local dist = (hrp.Position - obj.Position).Magnitude
+            if dist < 10 and (not closestBee or dist < closestDist) then
+                closestBee = obj
+                closestDist = dist
+            end
+        end
+    end
+    return closestBee
+end
+
+-- 5. Main Loop
+task.spawn(function()
+    while task.wait(0.05) do
+        if not state.master then continue end
+        local char = player.Character
+        if not char then continue end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChild("Humanoid")
+        if not hrp or not hum then continue end
+
+        -- Movement Logic
+        if state.fly then
+            hrp.Anchored = true
+            hum.WalkSpeed = 0
+            -- Simple fly movement using camera
+            local camCFrame = camera.CFrame
+            local moveVector = Vector3.new()
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVector += camCFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVector -= camCFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVector -= camCFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVector += camCFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveVector += Vector3.yAxis end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)
