@@ -368,81 +368,143 @@ local function createUI()
 
     return screenGui
 end
-
--- 4. Core Logic Functions
-local function getClosestEnemy(range)
-    local char = player.Character
-    if not char then return nil end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return nil end
-    
-    local closest, closestDist
-    for _, other in pairs(Players:GetPlayers()) do
-        if other ~= player and other.Character then
-            local otherHrp = other.Character:FindFirstChild("HumanoidRootPart")
-            if otherHrp then
-                local dist = (hrp.Position - otherHrp.Position).Magnitude
-                if dist < range and (not closest or dist < closestDist) then
-                    closest = other
-                    closestDist = dist
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveVector -= Vector3.yAxis end
+            
+            if moveVector.Magnitude > 0 then
+                hrp.AssemblyLinearVelocity = moveVector.Unit * (state.flySpeed * 10)
+            else
+                hrp.AssemblyLinearVelocity = Vector3.zero
+            end
+        else
+            hrp.Anchored = false
+            if state.speed then
+                hum.WalkSpeed = 100
+            else
+                hum.WalkSpeed = 16
+            end
+            if state.noClip then
+                for _, part in pairs(char:GetChildren()) do
+                    if part:IsA("BasePart") and part ~= hrp then
+                        part.CanCollide = false
+                    end
+                end
+            else
+                for _, part in pairs(char:GetChildren()) do
+                    if part:IsA("BasePart") and part ~= hrp then
+                        part.CanCollide = true
+                    end
                 end
             end
         end
-    end
-    return closest, closestDist
-end
 
-local function findBeeTarget()
-    if not state.beeCollect then return nil end
-    local char = player.Character
-    if not char then return nil end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return nil end
-    
-    -- Look for Bee Keeper Kit in tool
-    local hasKit = false
-    for _, tool in pairs(char:GetChildren()) do
-        if tool:IsA("Tool") and tool.Name:find("Bee") then
-            hasKit = true
-            break
-        end
-    end
-    if not hasKit then return nil end
-
-    -- Find closest bee
-    local closestBee, closestDist
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and obj.Name:find("Bee") then
-            local dist = (hrp.Position - obj.Position).Magnitude
-            if dist < 10 and (not closestBee or dist < closestDist) then
-                closestBee = obj
-                closestDist = dist
+        -- Combat Logic: Kill Aura
+        if state.aura then
+            local closest, dist = getClosestEnemy(state.auraRange)
+            if closest then
+                local targetHrp = closest.Character:FindFirstChild("HumanoidRootPart")
+                if targetHrp then
+                    local tool = char:FindFirstChildWhichIsA("Tool")
+                    if tool and tool:FindFirstChild("Handle") then
+                        tool.Handle.CFrame = CFrame.lookAt(hrp.Position, targetHrp.Position)
+                        local attack = tool:FindFirstChild("Attack")
+                        if attack and attack:IsA("BoolValue") then
+                            attack.Value = true
+                        end
+                    end
+                end
             end
         end
-    end
-    return closestBee
-end
 
--- 5. Main Loop
-task.spawn(function()
-    while task.wait(0.05) do
-        if not state.master then continue end
-        local char = player.Character
-        if not char then continue end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChild("Humanoid")
-        if not hrp or not hum then continue end
+        -- Combat Logic: Projectile Aimbot
+        if state.aimbot then
+            local closest, dist = getClosestEnemy(200)
+            if closest then
+                local targetHrp = closest.Character:FindFirstChild("HumanoidRootPart")
+                if targetHrp then
+                    local currentCF = camera.CFrame
+                    local targetCF = CFrame.lookAt(camera.CFrame.Position, targetHrp.Position + Vector3.new(0, 1, 0))
+                    local newCF = CFrame.Lerp(currentCF, targetCF, state.aimStrength / 100)
+                    camera.CFrame = newCF
+                end
+            end
+        end
 
-        -- Movement Logic
-        if state.fly then
-            hrp.Anchored = true
-            hum.WalkSpeed = 0
-            -- Simple fly movement using camera
-            local camCFrame = camera.CFrame
-            local moveVector = Vector3.new()
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVector += camCFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVector -= camCFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVector -= camCFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVector += camCFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveVector += Vector3.yAxis end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)
+        -- Bedwars Logic: Bee Keeper Auto-Collect
+        if state.beeCollect then
+            local bee = findBeeTarget()
+            if bee then
+                local tool = char:FindFirstChildWhichIsA("Tool")
+                if tool and tool.Name:find("Bee") then
+                    tool:Activate()
+                end
+            end
+        end
+
+        -- Bedwars Logic: Auto Farm
+        if state.autoFarm then
+            local char = player.Character
+            if char then
+                local tool = char:FindFirstChildWhichIsA("Tool")
+                if tool and (tool.Name:find("Sword") or tool.Name:find("Axe") or tool.Name:find("Pickaxe")) then
+                    local closestResource
+                    local closestDist = 32
+                    for _, obj in pairs(workspace:GetDescendants()) do
+                        if obj:IsA("BasePart") and (obj.Name:find("Ore") or obj.Name:find("Block") or obj.Name:find("Tree")) then
+                            local dist = (hrp.Position - obj.Position).Magnitude
+                            if dist < closestDist then
+                                closestResource = obj
+                                closestDist = dist
+                            end
+                        end
+                    end
+                    if closestResource then
+                        local toolHandle = tool:FindFirstChild("Handle")
+                        if toolHandle then
+                            toolHandle.CFrame = CFrame.lookAt(hrp.Position, closestResource.Position)
+                            local attack = tool:FindFirstChild("Attack")
+                            if attack and attack:IsA("BoolValue") then
+                                attack.Value = true
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Visuals: ESP Players
+        if state.espPlayers then
+            for _, other in pairs(Players:GetPlayers()) do
+                if other ~= player and other.Character then
+                    local hrp = other.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        local billboard = hrp:FindFirstChild("CurryV4_ESP")
+                        if not billboard then
+                            billboard = Instance.new("BillboardGui")
+                            billboard.Name = "CurryV4_ESP"
+                            billboard.Size = UDim2.new(0, 200, 0, 50)
+                            billboard.StudsOffset = Vector3.new(0, 2, 0)
+                            billboard.AlwaysOnTop = true
+                            billboard.Parent = hrp
+                            
+                            local label = Instance.new("TextLabel")
+                            label.Name = "ESPLabel"
+                            label.Size = UDim2.new(1, 0, 1, 0)
+                            label.BackgroundTransparency = 1
+                            label.Text = other.Name
+                            label.TextColor3 = theme.Accent
+                            label.TextSize = 18
+                            label.Font = Enum.Font.GothamBold
+                            label.Parent = billboard
+                        end
+                    end
+                end
+            end
+        else
+            for _, other in pairs(Players:GetPlayers()) do
+                if other.Character then
+                    local hrp = other.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        local billboard = hrp:FindFirstChild("
+
+
+
