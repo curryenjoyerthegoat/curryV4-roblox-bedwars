@@ -2,7 +2,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -21,22 +20,18 @@ local theme = {
 -- 2. State
 local state = {
     master = true,
-    -- Combat
     aura = true,
     auraRange = 50,
     aimbot = true,
     aimStrength = 50,
     silentAim = false,
-    -- Movement
     fly = false,
     flySpeed = 20,
     noClip = false,
     speed = false,
-    -- Config/Visuals
     espPlayers = true,
     espItems = true,
     tracers = false,
-    -- Bedwars Specific
     beeCollect = true,
     autoFarm = false,
     blockAura = false,
@@ -174,103 +169,4 @@ local function createUI()
         labelTxt.Parent = container
 
         local toggle = Instance.new("TextButton")
-        toggle.Size = UDim2.new(0, 50, 0, 25)
-        toggle.Position = UDim2.new(1, -60, 0, 5)
-        toggle.BackgroundColor3 = theme.Accent
-        toggle.Text = "ON"
-        toggle.TextColor3 = theme.Text
-        toggle.TextSize = 12
-        toggle.Font = Enum.Font.GothamBold
-        toggle.BorderSizePixel = 0
-        toggle.Parent = container
-        local toggleCorner = Instance.new("UICorner")
-        toggleCorner.CornerRadius = UDim.new(0, 6)
-        toggleCorner.Parent = toggle
-
-        local function setState(newState)
-            state[key] = newState
-            toggle.Text = newState and "ON" or "OFF"
-            toggle.BackgroundColor3 = newState and theme.Accent or theme.Background
-            toggle.TextColor3 = newState and theme.Text or theme.TextDim
-        end
-
-        setState(default)
-        toggle.MouseButton1Click:Connect(function()
-            if state.master then
-                setState(not state[key])
-            end
-        end)
-        return toggle
-    end
-
-    local function createSlider(parent, order, label, min, max, default, key)
-        local container = Instance.new("Frame")
-        container.LayoutOrder = order
-        container.Size = UDim2.new(1, 0, 0, 55)
-        container.BackgroundColor3 = theme.Background
-        container.BorderSizePixel = 0
-        container.Parent = parent
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 8)
-        corner.Parent = container
-
-        local labelTxt = Instance.new("TextLabel")
-        labelTxt.Size = UDim2.new(1, -20, 0, 20)
-        labelTxt.Position = UDim2.new(0, 10, 0, 5)
-        labelTxt.BackgroundTransparency = 1
-        labelTxt.Text = label
-        labelTxt.TextColor3 = theme.Text
-        labelTxt.TextSize = 14
-        labelTxt.Font = Enum.Font.GothamMedium
-        labelTxt.TextXAlignment = Enum.TextXAlignment.Left
-        labelTxt.Parent = container
-
-        local sliderBg = Instance.new("Frame")
-        sliderBg.Size = UDim2.new(1, -20, 0, 6)
-        sliderBg.Position = UDim2.new(0, 10, 0, 30)
-        sliderBg.BackgroundColor3 = theme.Border
-        sliderBg.BorderSizePixel = 0
-        sliderBg.Parent = container
-        local sliderCorner = Instance.new("UICorner")
-        sliderCorner.CornerRadius = UDim.new(0, 3)
-        sliderCorner.Parent = sliderBg
-
-        local sliderFill = Instance.new("Frame")
-        sliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-        sliderFill.BackgroundColor3 = theme.Accent
-        sliderFill.BorderSizePixel = 0
-        sliderFill.Parent = sliderBg
-        local sliderFillCorner = Instance.new("UICorner")
-        sliderFillCorner.CornerRadius = UDim.new(0, 3)
-        sliderFillCorner.Parent = sliderFill
-
-        local valueLabel = Instance.new("TextLabel")
-        valueLabel.Size = UDim2.new(1, -20, 0, 15)
-        valueLabel.Position = UDim2.new(0, 10, 0, 40)
-        valueLabel.BackgroundTransparency = 1
-        valueLabel.Text = tostring(default)
-        valueLabel.TextColor3 = theme.TextDim
-        valueLabel.TextSize = 12
-        valueLabel.Font = Enum.Font.Gotham
-        valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-        valueLabel.Parent = container
-
-        local dragging = false
-        local function updateSlider(x)
-            local relX = (x - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
-            relX = math.clamp(relX, 0, 1)
-            local val = min + relX * (max - min)
-            val = math.floor(val)
-            sliderFill.Size = UDim2.new(relX, 0, 1, 0)
-            valueLabel.Text = tostring(val)
-            state[key] = val
-        end
-
-        sliderBg.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                updateSlider(input.Position.X)
-            end
-        end)
-        sliderBg.InputEnded:Connect(function(input)
-            if input.UserInputType ==
+       
